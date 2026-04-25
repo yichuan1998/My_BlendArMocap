@@ -15,6 +15,37 @@ class WM_CGT_MP_modal_detection_operator(bpy.types.Operator):
     frame: int = 1
     key_step: int = 1
     memo: list
+    transfer_initialized: bool = False
+
+    def _set_default_driver_collection(self):
+        transfer_user = getattr(bpy.context.scene, "cgtinker_transfer", None)
+        if transfer_user is None or transfer_user.selected_driver_collection is not None:
+            return
+
+        mapping = {
+            'POSE': ["cgt_POSE", "cgt_Drivers", "cgt_DRIVERS"],
+            'HAND': ["cgt_HAND.L", "cgt_HAND.R", "cgt_Drivers", "cgt_DRIVERS"],
+            'FACE': ["cgt_FACE", "cgt_Drivers", "cgt_DRIVERS"],
+            'HOLISTIC': ["cgt_Drivers", "cgt_DRIVERS", "cgt_POSE"],
+        }
+        candidates = mapping.get(self.user.enum_detection_type, ["cgt_Drivers", "cgt_DRIVERS"])
+        for col_name in candidates:
+            col = bpy.data.collections.get(col_name)
+            if col is not None:
+                transfer_user.selected_driver_collection = col
+                return
+
+    def _apply_transfer(self, context):
+        previous_mode = context.mode
+        if previous_mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        state = bpy.ops.button.cgt_object_apply_properties()
+        success = 'CANCELLED' not in state
+
+        if previous_mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode=previous_mode)
+        return success
 
     def get_chain(self, stream) -> Optional[cgt_nodes.NodeChain]:
         from ..cgt_core import cgt_core_chains
@@ -107,22 +138,14 @@ class WM_CGT_MP_modal_detection_operator(bpy.types.Operator):
         else:
             self.user.modal_active = True
 
+        self.transfer_initialized = False
         if self.user.realtime_transfer:
-            previous_mode = context.mode
-            if previous_mode != 'OBJECT':
-                bpy.ops.object.mode_set(mode='OBJECT')
-
-            transfer_state = bpy.ops.button.cgt_object_apply_properties()
-            if 'CANCELLED' in transfer_state:
-                self.user.modal_active = False
-                self.report({'ERROR'}, "Live Drive Rig enabled, but transfer setup failed. "
-                                       "Check Armature / Driver Collection / Transfer Type.")
-                if previous_mode != 'OBJECT':
-                    bpy.ops.object.mode_set(mode=previous_mode)
-                return {'CANCELLED'}
-
-            if previous_mode != 'OBJECT':
-                bpy.ops.object.mode_set(mode=previous_mode)
+            self._set_default_driver_collection()
+            if self._apply_transfer(context):
+                self.transfer_initialized = True
+            else:
+                self.report({'WARNING'}, "Live Drive Rig enabled: transfer setup not ready yet. "
+                                         "Detection will continue and retry automatically.")
 
         # init stream and chain
         stream = self.get_stream()
@@ -210,6 +233,12 @@ class WM_CGT_MP_modal_detection_operator(bpy.types.Operator):
                 if data is None:
                     return self.cancel(context)
                 self.frame += self.key_step
+
+            if self.user.realtime_transfer and not self.transfer_initialized:
+                self._set_default_driver_collection()
+                if self._apply_transfer(context):
+                    self.transfer_initialized = True
+                    self.report({'INFO'}, "Live Drive Rig: transfer setup applied.")
 
         if event.type in {'Q', 'ESC', 'RIGHT_MOUSE'} or self.user.modal_active is False:
             return self.cancel(context)
