@@ -36,6 +36,16 @@ class WM_CGT_MP_modal_detection_operator(bpy.types.Operator):
                 return
 
     def _apply_transfer(self, context):
+        transfer_user = getattr(bpy.context.scene, "cgtinker_transfer", None)
+        if transfer_user is None:
+            return False
+        if transfer_user.selected_rig is None:
+            return False
+        if transfer_user.selected_driver_collection is None:
+            return False
+        if transfer_user.transfer_types in [None, "", "None"]:
+            return False
+
         previous_mode = context.mode
         if previous_mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
