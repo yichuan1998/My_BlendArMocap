@@ -19,6 +19,7 @@ class CGT_PT_MP_Detection(cgt_core_panel.DefaultPanel, bpy.types.Panel):
         layout.row().prop(user, "mov_data_path")
         layout.row().prop(user, "key_frame_step")
         layout.row().prop(user, "enum_detection_type")
+        layout.row().prop(user, "realtime_transfer")
         if user.modal_active:
             layout.row().operator("wm.cgt_feature_detection_operator", text="Stop Detection", icon='CANCEL')
         else:
@@ -29,6 +30,7 @@ class CGT_PT_MP_Detection(cgt_core_panel.DefaultPanel, bpy.types.Panel):
         layout.row().prop(user, "webcam_input_device")
         layout.row().prop(user, "key_frame_step")
         layout.row().prop(user, "enum_detection_type")
+        layout.row().prop(user, "realtime_transfer")
         if user.modal_active:
             layout.row().operator("wm.cgt_feature_detection_operator", text="Stop Detection", icon='RADIOBUT_ON')
         else:

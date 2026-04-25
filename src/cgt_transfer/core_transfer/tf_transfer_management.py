@@ -167,11 +167,11 @@ def get_driver_target(obj: bpy.types.Object) -> bpy.types.Object:
 def apply_constraints(target_obj: Union[bpy.types.Object, bpy.types.PoseBone], obj: bpy.types.Object,
                       driver_target: bpy.types.Object) -> None:
     """ Apply constraint """
-    # TODO: move to set_props (?)
-    for c in target_obj.constraints:
-        if c.active and c.is_valid:
-            continue
-        target_obj.constraints.remove(c)
+    # remove only constraints previously created by BlendArMocap
+    # and keep native rig constraints untouched (e.g. Rigify internals)
+    for c in list(target_obj.constraints):
+        if c.name.startswith("CGT_"):
+            target_obj.constraints.remove(c)
 
     for c in obj.constraints:
         constraint_name = c.type
@@ -179,6 +179,7 @@ def apply_constraints(target_obj: Union[bpy.types.Object, bpy.types.PoseBone], o
         constraint = target_obj.constraints.new(constraint_name)
         constraint_props['target'] = driver_target
         tf_set_object_properties.set_constraint_props(constraint, constraint_props)
+        constraint.name = f"CGT_{constraint_name}"
 # endregion
 
 

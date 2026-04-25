@@ -107,6 +107,23 @@ class WM_CGT_MP_modal_detection_operator(bpy.types.Operator):
         else:
             self.user.modal_active = True
 
+        if self.user.realtime_transfer:
+            previous_mode = context.mode
+            if previous_mode != 'OBJECT':
+                bpy.ops.object.mode_set(mode='OBJECT')
+
+            transfer_state = bpy.ops.button.cgt_object_apply_properties()
+            if 'CANCELLED' in transfer_state:
+                self.user.modal_active = False
+                self.report({'ERROR'}, "Live Drive Rig enabled, but transfer setup failed. "
+                                       "Check Armature / Driver Collection / Transfer Type.")
+                if previous_mode != 'OBJECT':
+                    bpy.ops.object.mode_set(mode=previous_mode)
+                return {'CANCELLED'}
+
+            if previous_mode != 'OBJECT':
+                bpy.ops.object.mode_set(mode=previous_mode)
+
         # init stream and chain
         stream = self.get_stream()
         self.node_chain = self.get_chain(stream)
