@@ -111,6 +111,13 @@ class MP_PG_Properties(bpy.types.PropertyGroup):
         default=False
     )
 
+    realtime_transfer: bpy.props.BoolProperty(
+        name="Live Drive Rig",
+        description="Automatically apply transfer setup before detection starts "
+                    "to drive the selected transfer rig live while tracking.",
+        default=False,
+    )
+
     local_user: bpy.props.BoolProperty(
         name="Local user",
         description="Install to local user and not to blenders python site packages.",
